@@ -16,12 +16,27 @@ class CaptureImageViewController: UIViewController, AVCapturePhotoCaptureDelegat
     private let imageStackView = UIStackView()
     private let captureButton = UIButton(type: .system)
     private let scrollView = UIScrollView()
+    private let closeButton = UIButton(type: .system)
     
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .black
         setupCamera()
         setupUI()
+        setupCloseButton()
+    }
+    
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        captureSession.stopRunning()
+        for input in captureSession.inputs {
+            captureSession.removeInput(input)
+        }
+        for output in captureSession.outputs {
+            captureSession.removeOutput(output)
+        }
+        previewLayer?.session = nil
+        previewLayer?.removeFromSuperlayer()
     }
     
     private func setupCamera() {
@@ -41,12 +56,10 @@ class CaptureImageViewController: UIViewController, AVCapturePhotoCaptureDelegat
     }
     
     private func setupUI() {
-        // Scroll view setup
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         scrollView.showsHorizontalScrollIndicator = true
         view.addSubview(scrollView)
         
-        // Image stack view setup
         imageStackView.axis = .horizontal
         imageStackView.alignment = .center
         imageStackView.distribution = .equalSpacing
@@ -54,7 +67,6 @@ class CaptureImageViewController: UIViewController, AVCapturePhotoCaptureDelegat
         imageStackView.translatesAutoresizingMaskIntoConstraints = false
         scrollView.addSubview(imageStackView)
         
-        // Capture button
         captureButton.setTitle("📸", for: .normal)
         captureButton.titleLabel?.font = UIFont.systemFont(ofSize: 36)
         captureButton.backgroundColor = UIColor.white.withAlphaComponent(0.7)
@@ -63,7 +75,6 @@ class CaptureImageViewController: UIViewController, AVCapturePhotoCaptureDelegat
         captureButton.addTarget(self, action: #selector(capturePhoto), for: .touchUpInside)
         view.addSubview(captureButton)
         
-        // Constraints
         NSLayoutConstraint.activate([
             scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
             scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
@@ -81,6 +92,28 @@ class CaptureImageViewController: UIViewController, AVCapturePhotoCaptureDelegat
             captureButton.widthAnchor.constraint(equalToConstant: 64),
             captureButton.heightAnchor.constraint(equalToConstant: 64)
         ])
+    }
+    
+    private func setupCloseButton() {
+        closeButton.setTitle("✕", for: .normal)
+        closeButton.titleLabel?.font = UIFont.systemFont(ofSize: 28, weight: .bold)
+        closeButton.tintColor = .white
+        closeButton.backgroundColor = UIColor.black.withAlphaComponent(0.5)
+        closeButton.layer.cornerRadius = 22
+        closeButton.translatesAutoresizingMaskIntoConstraints = false
+        closeButton.addTarget(self, action: #selector(closeTapped), for: .touchUpInside)
+        view.addSubview(closeButton)
+        
+        NSLayoutConstraint.activate([
+            closeButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 12),
+            closeButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
+            closeButton.widthAnchor.constraint(equalToConstant: 44),
+            closeButton.heightAnchor.constraint(equalToConstant: 44)
+        ])
+    }
+    
+    @objc private func closeTapped() {
+        dismiss(animated: true, completion: nil)
     }
     
     @objc private func capturePhoto() {
