@@ -137,15 +137,51 @@ class CaptureImageViewController: UIViewController, AVCapturePhotoCaptureDelegat
     func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
         guard let data = photo.fileDataRepresentation(),
               let image = UIImage(data: data) else { return }
-        let imageView = UIImageView(image: image)
-        imageView.contentMode = .scaleAspectFill
-        imageView.clipsToBounds = true
-        imageView.layer.cornerRadius = 8
-        imageView.translatesAutoresizingMaskIntoConstraints = false
-        NSLayoutConstraint.activate([
-            imageView.widthAnchor.constraint(equalToConstant: 64),
-            imageView.heightAnchor.constraint(equalToConstant: 64)
-        ])
-        imageStackView.addArrangedSubview(imageView)
+        
+        // 1. Take a snapshot of the preview layer
+        UIGraphicsBeginImageContextWithOptions(view.bounds.size, false, UIScreen.main.scale)
+        view.layer.render(in: UIGraphicsGetCurrentContext()!)
+        let previewSnapshot = UIGraphicsGetImageFromCurrentImageContext()
+        UIGraphicsEndImageContext()
+        
+        let snapshotView = UIImageView(image: previewSnapshot)
+        snapshotView.frame = view.bounds
+        snapshotView.layer.masksToBounds = true
+        view.addSubview(snapshotView)
+        
+        // 2. Prepare the target frame in the stack view
+        let targetFrameInStack = imageStackView.convert(CGRect(x: 0, y: 0, width: 64, height: 64), to: view)
+        
+        // 3. Animate existing images to the right
+        let shiftDistance: CGFloat = 72 // 64 + 8 spacing
+        UIView.animate(withDuration: 0.5, delay: 0, options: [.curveEaseInOut], animations: {
+            for (i, subview) in self.imageStackView.arrangedSubviews.enumerated() {
+                subview.transform = CGAffineTransform(translationX: shiftDistance, y: 0)
+            }
+        }, completion: nil)
+        
+        // 4. Animate the snapshot shrinking to the leftmost slot
+        UIView.animate(withDuration: 0.5, delay: 0, options: [.curveEaseInOut], animations: {
+            snapshotView.frame = targetFrameInStack
+            snapshotView.layer.cornerRadius = 8
+        }, completion: { _ in
+            // 5. Insert the new image view at index 0
+            let imageView = UIImageView(image: image)
+            imageView.contentMode = .scaleAspectFill
+            imageView.clipsToBounds = true
+            imageView.layer.cornerRadius = 8
+            imageView.translatesAutoresizingMaskIntoConstraints = false
+            NSLayoutConstraint.activate([
+                imageView.widthAnchor.constraint(equalToConstant: 64),
+                imageView.heightAnchor.constraint(equalToConstant: 64)
+            ])
+            self.imageStackView.insertArrangedSubview(imageView, at: 0)
+            
+            // 6. Remove the snapshot and reset transforms
+            snapshotView.removeFromSuperview()
+            for subview in self.imageStackView.arrangedSubviews {
+                subview.transform = .identity
+            }
+        })
     }
 }
