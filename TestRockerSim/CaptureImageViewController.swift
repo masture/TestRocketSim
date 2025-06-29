@@ -153,14 +153,9 @@ class CaptureImageViewController: UIViewController, AVCapturePhotoCaptureDelegat
         // 1. Get the frame above the stack view
         let stackTop = imageStackView.convert(CGPoint(x: 0, y: 0), to: view)
         let captureRect = CGRect(x: 0, y: 0, width: view.bounds.width, height: stackTop.y)
-        
-        // 2. Snapshot only the area above the stack view
-        UIGraphicsBeginImageContextWithOptions(captureRect.size, false, UIScreen.main.scale)
-        view.drawHierarchy(in: CGRect(origin: .zero, size: view.bounds.size), afterScreenUpdates: false)
-        let snapshotImage = UIGraphicsGetImageFromCurrentImageContext()
-        UIGraphicsEndImageContext()
-        
-        let snapshotView = UIImageView(image: snapshotImage)
+    
+        // 2. Create a snapshot view of the captured image for animation
+        let snapshotView = UIImageView(image: image)
         snapshotView.frame = captureRect
         snapshotView.contentMode = .scaleAspectFill
         snapshotView.layer.masksToBounds = true
