@@ -17,42 +17,55 @@ class CaptureImageViewController: UIViewController, AVCapturePhotoCaptureDelegat
     private let captureButton = UIButton(type: .system)
     private let scrollView = UIScrollView()
     private let closeButton = UIButton(type: .system)
+    private let sessionQueue = DispatchQueue(label: "camera.session.queue")
     
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .black
-        setupCamera()
         setupUI()
         setupCloseButton()
+        setupCamera()
     }
     
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
-        captureSession.stopRunning()
-        for input in captureSession.inputs {
-            captureSession.removeInput(input)
+        sessionQueue.async { [weak self] in
+            guard let self = self else { return }
+            self.captureSession.stopRunning()
+            for input in self.captureSession.inputs {
+                self.captureSession.removeInput(input)
+            }
+            for output in self.captureSession.outputs {
+                self.captureSession.removeOutput(output)
+            }
+            DispatchQueue.main.async {
+                self.previewLayer?.session = nil
+                self.previewLayer?.removeFromSuperlayer()
+            }
         }
-        for output in captureSession.outputs {
-            captureSession.removeOutput(output)
-        }
-        previewLayer?.session = nil
-        previewLayer?.removeFromSuperlayer()
     }
     
     private func setupCamera() {
-        captureSession.sessionPreset = .photo
-        guard let frontCamera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .front),
-              let input = try? AVCaptureDeviceInput(device: frontCamera),
-              captureSession.canAddInput(input) else { return }
-        captureSession.addInput(input)
-        if captureSession.canAddOutput(photoOutput) {
-            captureSession.addOutput(photoOutput)
+        sessionQueue.async { [weak self] in
+            guard let self = self else { return }
+            self.captureSession.beginConfiguration()
+            self.captureSession.sessionPreset = .photo
+            guard let frontCamera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .front),
+                  let input = try? AVCaptureDeviceInput(device: frontCamera),
+                  self.captureSession.canAddInput(input) else { return }
+            self.captureSession.addInput(input)
+            if self.captureSession.canAddOutput(self.photoOutput) {
+                self.captureSession.addOutput(self.photoOutput)
+            }
+            self.captureSession.commitConfiguration()
+            DispatchQueue.main.async {
+                self.previewLayer = AVCaptureVideoPreviewLayer(session: self.captureSession)
+                self.previewLayer.videoGravity = .resizeAspectFill
+                self.previewLayer.frame = self.view.bounds
+                self.view.layer.insertSublayer(self.previewLayer, at: 0)
+            }
+            self.captureSession.startRunning()
         }
-        previewLayer = AVCaptureVideoPreviewLayer(session: captureSession)
-        previewLayer.videoGravity = .resizeAspectFill
-        previewLayer.frame = view.bounds
-        view.layer.insertSublayer(previewLayer, at: 0)
-        captureSession.startRunning()
     }
     
     private func setupUI() {
