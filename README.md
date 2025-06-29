@@ -3,7 +3,8 @@
 
 This is a sample app that uses the front-facing camera of your Mac to simulate an iPhone. It captures images and displays them in a horizontal scroll view at the bottom.
 
-This app is designed to test and demonstrate the new feature of using the Mac’s HD FaceTime camera as the iPhone simulator’s camera.
+This app is designed to test and demonstrate the new feature of [RocketSim App](https://www.rocketsim.app/).
+It enables using the Mac’s HD FaceTime camera as the iPhone simulator’s camera.
 
 It works like a charm! The integration is super simple.
 
