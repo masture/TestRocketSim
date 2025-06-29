@@ -18,6 +18,7 @@ class CaptureImageViewController: UIViewController, AVCapturePhotoCaptureDelegat
     private let scrollView = UIScrollView()
     private let closeButton = UIButton(type: .system)
     private let sessionQueue = DispatchQueue(label: "camera.session.queue")
+    private let blurView = UIVisualEffectView(effect: UIBlurEffect(style: .light))
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -69,6 +70,11 @@ class CaptureImageViewController: UIViewController, AVCapturePhotoCaptureDelegat
     }
     
     private func setupUI() {
+        
+        // Add blur view (hidden initially)
+        blurView.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(blurView)
+        
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         scrollView.showsHorizontalScrollIndicator = true
         view.addSubview(scrollView)
@@ -103,7 +109,13 @@ class CaptureImageViewController: UIViewController, AVCapturePhotoCaptureDelegat
             captureButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             captureButton.bottomAnchor.constraint(equalTo: scrollView.topAnchor, constant: -24),
             captureButton.widthAnchor.constraint(equalToConstant: 64),
-            captureButton.heightAnchor.constraint(equalToConstant: 64)
+            captureButton.heightAnchor.constraint(equalToConstant: 64),
+            
+            // Blur view constraints
+            blurView.topAnchor.constraint(equalTo: scrollView.topAnchor, constant: -4),
+            blurView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            blurView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            blurView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
     }
     
@@ -138,15 +150,23 @@ class CaptureImageViewController: UIViewController, AVCapturePhotoCaptureDelegat
         guard let data = photo.fileDataRepresentation(),
               let image = UIImage(data: data) else { return }
         
-        // 1. Create a snapshot view of the captured image for animation
-        let snapshotView = UIImageView(image: image)
-        snapshotView.image = image
+        // 1. Get the frame above the stack view
+        let stackTop = imageStackView.convert(CGPoint(x: 0, y: 0), to: view)
+        let captureRect = CGRect(x: 0, y: 0, width: view.bounds.width, height: stackTop.y)
+        
+        // 2. Snapshot only the area above the stack view
+        UIGraphicsBeginImageContextWithOptions(captureRect.size, false, UIScreen.main.scale)
+        view.drawHierarchy(in: CGRect(origin: .zero, size: view.bounds.size), afterScreenUpdates: false)
+        let snapshotImage = UIGraphicsGetImageFromCurrentImageContext()
+        UIGraphicsEndImageContext()
+        
+        let snapshotView = UIImageView(image: snapshotImage)
+        snapshotView.frame = captureRect
         snapshotView.contentMode = .scaleAspectFill
-        snapshotView.frame = view.bounds
         snapshotView.layer.masksToBounds = true
         view.addSubview(snapshotView)
         
-        // 2. Prepare the target frame in the stack view
+        // 3. Prepare the target frame in the stack view
         let targetFrameInStack = imageStackView.convert(CGRect(x: 0, y: 0, width: 64, height: 64), to: view)
         
         // 3. Animate existing images to the right
