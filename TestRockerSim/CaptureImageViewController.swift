@@ -138,13 +138,10 @@ class CaptureImageViewController: UIViewController, AVCapturePhotoCaptureDelegat
         guard let data = photo.fileDataRepresentation(),
               let image = UIImage(data: data) else { return }
         
-        // 1. Take a snapshot of the preview layer
-        UIGraphicsBeginImageContextWithOptions(view.bounds.size, false, UIScreen.main.scale)
-        view.layer.render(in: UIGraphicsGetCurrentContext()!)
-        let previewSnapshot = UIGraphicsGetImageFromCurrentImageContext()
-        UIGraphicsEndImageContext()
-        
-        let snapshotView = UIImageView(image: previewSnapshot)
+        // 1. Create a snapshot view of the captured image for animation
+        let snapshotView = UIImageView(image: image)
+        snapshotView.image = image
+        snapshotView.contentMode = .scaleAspectFill
         snapshotView.frame = view.bounds
         snapshotView.layer.masksToBounds = true
         view.addSubview(snapshotView)
@@ -155,7 +152,7 @@ class CaptureImageViewController: UIViewController, AVCapturePhotoCaptureDelegat
         // 3. Animate existing images to the right
         let shiftDistance: CGFloat = 72 // 64 + 8 spacing
         UIView.animate(withDuration: 0.5, delay: 0, options: [.curveEaseInOut], animations: {
-            for (i, subview) in self.imageStackView.arrangedSubviews.enumerated() {
+            for (_, subview) in self.imageStackView.arrangedSubviews.enumerated() {
                 subview.transform = CGAffineTransform(translationX: shiftDistance, y: 0)
             }
         }, completion: nil)
